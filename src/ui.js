@@ -560,7 +560,7 @@
     }
     Vt(e, t, n - 26, !0);
     const u = ce();
-    d(e, "v2 \xB7 ORIGINAL GAME \xB7 2026", t - Math.max(12, u.r + 8), n - 8, 10, "dim", "right");
+    d(e, "v3 \xB7 ORIGINAL GAME \xB7 2026", t - Math.max(12, u.r + 8), n - 8, 10, "dim", "right");
   }
   function Yt(e) {
     e.id === "race" ? (O("confirm"), J("shipselect")) : e.id === "story" ? (O("confirm"), J("story")) : (O("select"), J(e.id));
