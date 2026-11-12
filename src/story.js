@@ -551,7 +551,9 @@
       (a.ch && (!t || a.ch.indexOf(t.num) < 0)) ||
       (a.flag && !o.flags[a.flag]) ||
       (a.nflag && o.flags[a.nflag]) ||
-      (a.rival && a.rival !== o.rival)
+      (a.rival && a.rival !== o.rival) ||
+      (a.bond && q.Pilots && !q.Pilots.gate(a.bond)) ||
+      (a.bond && !q.Pilots)
     );
   }
   function Ce(e) {

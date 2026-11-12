@@ -1,0 +1,11 @@
+{
+  "name": "Plasma Grand Prix",
+  "short_name": "Plasma GP",
+  "description": "Anti-gravity racing across Neon Harbor and the Selene Dome.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0620",
+  "theme_color": "#0b0620"
+}

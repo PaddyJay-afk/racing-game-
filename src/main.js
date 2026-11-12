@@ -120,7 +120,7 @@
   let V = 0;
   const w = "neon_harbor",
     Se = { neon_harbor: "race1", lunar_dome: "race3" },
-    ve = { title: 1, story: 1, options: 1, soundtest: 1, mymusic: 1, shipselect: 1, trackselect: 1, briefing: 1 },
+    ve = { title: 1, story: 1, options: 1, soundtest: 1, mymusic: 1, shipselect: 1, trackselect: 1, briefing: 1, pilots: 1 },
     N = {};
   let te = null,
     C = w,
@@ -243,6 +243,9 @@
       o("prepare", de(R.id || t)),
       o("playMusic", de(R.id || t), { fadeIn: 0.5 }),
       (T = "race"));
+    c(n.Pilots, "raceStart", f, { mode: D, chapter: W });
+    c(n.Sfx2, "raceStart", f);
+    c(n.Cine, "raceStart", f, R, { mode: D, chapter: W });
   }
   function re() {
     ((D = "free"), (W = -1), c(n.Story, "stop"));
@@ -283,7 +286,7 @@
     f && (z(), c(n.Voice, "stop"), n.UI.setScreen("pause"), c(n.Input, "setMode", "menu"), o("sfx", "pause"), (T = "pause"));
   }
   function ye() {
-    (ne(), z(), re(), (f = null), n.UI.setScreen("title"), c(n.Input, "setMode", "menu"));
+    (c(n.Cine, "stop"), c(n.Sfx2, "stop"), ne(), z(), re(), (f = null), n.UI.setScreen("title"), c(n.Input, "setMode", "menu"));
   }
   function Me(e, t) {
     if (
@@ -312,7 +315,7 @@
       u = !!(r && r.active && r.onEvent);
     for (let p = 0; p < t.length; p++) {
       const i = t[p];
-      switch ((u && r.onEvent(i, e), i.type)) {
+      switch ((u && r.onEvent(i, e), c(n.Cine, "onEvent", i, e), c(n.Sfx2, "onEvent", i, e), c(n.Pilots, "onEvent", i, e), i.type)) {
         case "countdown":
           o("sfx", "countdown");
           break;
@@ -363,7 +366,7 @@
           break;
         }
         case "finish":
-          (z(), o("sfx", "finish"), se(i.place === 1 ? "Winner!" : "Finish"), (P = 3.5));
+          (z(), o("sfx", "finish"), se(i.place === 1 ? "Winner!" : "Finish"), (P = n.Cine && n.Cine.mode === "finish" ? n.Cine.finishHold : 3.5));
           break;
         case "retired":
           (z(),
@@ -372,7 +375,7 @@
             (V = setTimeout(() => {
               ((V = 0), o("playMusic", "gameover"));
             }, 600)),
-            (P = 3));
+            (P = n.Cine && n.Cine.mode === "wreck" ? n.Cine.wreckHold : 3));
           break;
       }
     }
@@ -406,7 +409,8 @@
         else {
           const l = r === "race" ? u : j,
             h = window.__r3d;
-          h && h.mode === "loading" ? (g = 0) : (g += t);
+          const cn = n.Cine;
+          h && h.mode === "loading" ? ((g = 0), cn && cn.mode === "intro" && (cn.state.t = 0)) : cn && cn.hold ? (g = 0) : (g += t * (cn ? cn.timeScale : 1));
           let k = !0;
           for (; g >= m;) {
             let b = l;
@@ -423,7 +427,11 @@
               (k = !1),
               (g -= m));
           }
-          (Ee(f), r === "race" && n.Story && n.Story.active && n.Story.update(t, f));
+          (Ee(f),
+            r === "race" && n.Story && n.Story.active && n.Story.update(t, f),
+            h && h.mode === "loading" ? 0 : c(n.Cine, "update", t, f, r),
+            c(n.Sfx2, "update", t, f, r),
+            c(n.Pilots, "update", t, f, r));
           const _ = f.player;
           if (
             (r === "race" && f.phase === "racing" && _ && !_.exploded
@@ -437,12 +445,16 @@
               b && b.chapter != null
                 ? (c(n.Story, "hush"), s.setScreen("epilogue", { result: b, game: f }), (T = "epilogue"))
                 : (c(n.Story, "hush"), s.setScreen("results", f), (T = "results")),
+              c(n.Cine, "results"),
+              c(n.Pilots, "raceEnd", f, { mode: D, chapter: W, result: b }),
               c(n.Input, "setMode", "menu"),
               f.phase === "finished" && o("playMusic", "results", { fadeIn: 0.3 }));
           }
         }
       else if (f && r === "pause") ((p = f), (i = !1), (g = 0));
       else if (S) {
+        c(n.Cine, "update", t, null, r);
+        c(n.Sfx2, "update", t, null, r);
         for (g += t; g >= m;) (g - m < m && Q(S), S.update(m, j), (g -= m));
         ((S.events.length = 0), (K += t), K > 240 && L(C));
       }
@@ -454,7 +466,13 @@
       const d = n.Render.ctx,
         x = n.Render.W,
         I = n.Render.H;
-      if ((f && (r === "race" || r === "pause") && c(n.HUD, "draw", d, x, I, f, Z), s.draw(d, x, I, Z, p), !O.splashed)) {
+      const hh = n.Cine && n.Cine.hideHud && r === "race";
+      if (
+        (f && (r === "race" || r === "pause") && !hh && c(n.HUD, "draw", d, x, I, f, Z),
+        f && r === "race" && c(n.Cine, "draw", d, x, I, Z),
+        s.draw(d, x, I, Z, p),
+        !O.splashed)
+      ) {
         O.splashed = 1;
         try {
           window.__splashDone && window.__splashDone();
@@ -470,6 +488,7 @@
       window.__splash && window.__splash(15, "Starting");
     } catch {}
     n.Render.init(fe);
+    c(n.Device, "apply");
     try {
       window.__splash && window.__splash(60, "Building world");
     } catch {}

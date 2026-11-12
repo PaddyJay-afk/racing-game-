@@ -16,6 +16,7 @@
       "options",
       "soundtest",
       "mymusic",
+      "pilots",
     ],
     Ot = [
       { id: "title", title: "TITLE" },
@@ -544,17 +545,18 @@
     const r = [
         ["race", "RACE"],
         ["story", "STORY"],
+        ["pilots", "PILOTS"],
         ["options", "OPTIONS"],
         ["soundtest", "SOUND TEST"],
       ],
       c = 220,
-      a = 34,
-      f = 6,
-      b = 146;
+      a = 30,
+      f = 5,
+      b = 142;
     for (let h = 0; h < r.length; h++) {
       const w = Math.pow(1 - fe((l - 0.05 * h) / 0.3), 2) * (h % 2 ? 1 : -1) * t * 0.6,
         I = G({ id: r[h][0], label: r[h][1], x: Math.round(t / 2 - c / 2 + w), y: b + h * (a + f), w: c, h: a, onTap: Yt });
-      q(e, I, i, h < 2 ? { go: !1, size: 21 } : { size: 18 });
+      q(e, I, i, h < 2 ? { go: !1, size: 20 } : { size: 17 });
     }
     Vt(e, t, n - 26, !0);
     const u = ce();
@@ -1363,6 +1365,16 @@
         scale: 10,
         apply: (t) => yt("setVolume", t),
       },
+      {
+        id: "cine",
+        label: "CUTSCENES",
+        kind: "toggle",
+        value: z.get("cine.intro", !0) !== !1 ? "ON" : "OFF",
+        act: () => {
+          const t = z.get("cine.intro", !0) === !1;
+          (z.set("cine.intro", t), z.set("cine.finish", t));
+        },
+      },
       { id: "stest", label: "SOUND TEST", kind: "action", value: "\u25B6", act: () => J("soundtest") },
       { id: "mymusic", label: "MY MUSIC", kind: "action", value: kt() ? kt() + " LOADED  \u25B6" : "\u25B6", act: () => J("mymusic") },
     ];
@@ -1998,6 +2010,25 @@
     const n = Ft(e, t);
     !n || !n.onTap || ((s.focusVisible = !1), (s.flashId = n.id), (s.flashT = s.t), n.onTap(n, e, t));
   }
+  /* drawing kit handed to extension screens (pilots.js) */
+  const pgpKit = {
+    text: d,
+    num: re,
+    textW: pe,
+    panel: ee,
+    slant: X,
+    item: G,
+    button: q,
+    header: me,
+    dim: se,
+    bars: le,
+    safe: ce,
+    pal: M,
+    go: (e) => J(e),
+    back: () => ue(),
+    sfx: O,
+    focused: (e) => Se(e),
+  };
   function Et(e) {
     if (!s.portrait) {
       if (s.screen === "trackselect") {
@@ -2081,7 +2112,7 @@
     if (e === "back") {
       s.screen === "pause"
         ? (O("confirm"), ne("resume"))
-        : s.screen === "options" || s.screen === "soundtest" || s.screen === "mymusic" || s.screen === "story"
+        : s.screen === "options" || s.screen === "soundtest" || s.screen === "mymusic" || s.screen === "story" || s.screen === "pilots"
           ? ue()
           : s.screen === "epilogue" && (O("select"), J("story"));
       return;
@@ -2103,6 +2134,7 @@
               s.screen === "results" ||
               s.screen === "options" ||
               s.screen === "story" ||
+              s.screen === "pilots" ||
               s.screen === "epilogue") &&
             ((s.focus = Ct(t, s.focus, i, 0)), O("select"));
       } else if (e === "ok") {
@@ -2246,11 +2278,15 @@
               case "mymusic":
                 gn(e, c, a, i);
                 break;
+              case "pilots":
+                T.Pilots && T.Pilots.drawScreen && T.Pilots.drawScreen(e, c, a, i, pgpKit);
+                break;
               case "pause":
                 bn(e, c, a, i, l);
                 break;
               case "results":
                 Tn(e, c, a, i, l);
+                T.Pilots && T.Pilots.drawReport && T.Pilots.drawReport(e, c, a, i, pgpKit);
                 break;
               default:
                 break;

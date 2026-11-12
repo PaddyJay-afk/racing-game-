@@ -1,0 +1,15 @@
+{
+  "name": "plasma-grand-prix",
+  "version": "3.0.0",
+  "description": "Plasma Grand Prix: anti-gravity racing for the browser (three.js, Web Audio, no assets to download).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "build": "node tools/build.mjs",
+    "build:min": "node tools/build.mjs --minify"
+  },
+  "devDependencies": {
+    "terser": "^5.31.0"
+  }
+}

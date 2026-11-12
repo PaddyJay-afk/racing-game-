@@ -23,6 +23,32 @@
     a0 = [-0.55, 0.12, -0.83],
     Ue = 2.3,
     je = {
+      ultra: {
+        name: "ultra",
+        partK: 1.3,
+        outMax: 3,
+        smax: 3,
+        smin: 2,
+        s0: 2.5,
+        samples: 4,
+        samples3: 2,
+        bloom2: !0,
+        shadow: 4096,
+        trails: !0,
+        shimmer: !0,
+        flare: !0,
+        radial: 12,
+        clouds: 2,
+        far: 1,
+        water: 2,
+        streak: 2,
+        rays: 16,
+        stars: 190,
+        glint: 1,
+        rig: 1,
+        sharp: 0.2,
+        dome: 2,
+      },
       high: {
         name: "high",
         partK: 1,
@@ -230,7 +256,7 @@
         },
       },
     },
-    _0 = ["low", "medium", "high"];
+    _0 = ["low", "medium", "high", "ultra"];
   function dt(t, e) {
     return typeof t == "number" && isFinite(t) ? t : e;
   }
@@ -922,7 +948,7 @@
     return (
       (Be = { alb: L0(f, t, !0), nrm: L0(la(e, t, 6), t, !0) }),
       (Be.alb.userData.shared = Be.nrm.userData.shared = !0),
-      (Be.alb.anisotropy = Be.nrm.anisotropy = Math.min(8, pe)),
+      (Be.alb.anisotropy = Be.nrm.anisotropy = pe),
       Be
     );
   }
@@ -1617,6 +1643,7 @@
     },
     j = {
       tier: je.high,
+      top: "high",
       auto: !0,
       scale: 2.5,
       lock: 0,
@@ -1657,6 +1684,16 @@
       },
       debug: null,
       debugLockScale: 0,
+      /* cinematic camera override: { on, px, py, pz, tx, ty, tz, fov (vertical deg), roll } in world space (game x,y -> world x,z) */
+      cine: null,
+      /* per-frame post FX driven by cine.js */
+      fx: { ca: 0, shock: [0.5, 0.5, 0, 0], grain: 0.03, cine: 0, bars: 0, desat: 0, fade: 0, anam: 0, bloom: 0, exposure: 1, radial: 0, roll: 0 },
+      project: pgpProject,
+      camPos: pgpCamPos,
+      setTopTier: pgpSetTop,
+      get tiers() {
+        return _0.slice();
+      },
     },
     nt = (window.__r3d = {
       calls: 0,
@@ -2011,18 +2048,31 @@
           uVig: { value: 0.32 },
           uFlash: { value: 0 },
           uLdr: { value: t ? 1 : 0 },
+          uCA: { value: 0 },
+          uShock: { value: new THREE.Vector4(0.5, 0.5, 0, 0) },
+          uGrain: { value: 0 },
+          uCine: { value: 0 },
+          uBars: { value: 0 },
+          uDesat: { value: 0 },
+          uFade: { value: 0 },
         },
         vertexShader: Te,
         fragmentShader: `uniform sampler2D tScene; uniform sampler2D tB1; uniform sampler2D tB2; uniform float uB2; uniform float uBloom;
         uniform sampler2D tStreak; uniform float uStreak; uniform sampler2D tRay; uniform float uRay;
         uniform float uTime; uniform float uShimmer; uniform float uRadial; uniform float uTaps; uniform vec2 uFocus;
         uniform vec2 uSunP; uniform float uSunOn; uniform float uFlare; uniform float uAspect; uniform float uExposure; uniform float uVig; uniform float uFlash; uniform float uLdr;
+        uniform float uCA; uniform vec4 uShock; uniform float uGrain; uniform float uCine; uniform float uBars; uniform float uDesat; uniform float uFade;
         varying vec2 vUv;
         vec3 aces(vec3 x){ return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
         float h12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
         float disc(vec2 p, vec2 c, float r, float soft){ vec2 d = (p - c) * vec2(uAspect, 1.0); return smoothstep(r, r * soft, length(d)); }
         void main(){
           vec2 uv = vUv;
+          if (uShock.w > 0.002) {     // expanding refraction ring (explosions, boost ignition)
+            vec2 sd = (uv - uShock.xy) * vec2(uAspect, 1.0); float sl = length(sd), ring = sl - uShock.z;
+            float sw = exp(-ring * ring * 520.0) * uShock.w;
+            uv -= (sd / max(sl, 1e-4)) / vec2(uAspect, 1.0) * sw * 0.045;
+          }
           if (uShimmer > 0.5) {
             float sh = clamp(1.0 - texture2D(tScene, uv).a, 0.0, 1.0);
             if (sh > 0.002) {
@@ -2037,6 +2087,11 @@
             vec3 acc = col; float ws = 1.0;
             for (int i = 1; i < 12; i++) { if (float(i) >= uTaps) break; float t = float(i) / uTaps; float w = 1.0 - t * 0.5; acc += texture2D(tScene, uv - d * k * t).rgb * w; ws += w; }
             col = acc / ws;
+          }
+          if (uCA > 0.002) {          // lens chromatic aberration, grows toward the frame edge
+            vec2 cd = uv - 0.5; float ck = uCA * (0.0012 + 0.012 * dot(cd, cd));
+            col.r = mix(col.r, texture2D(tScene, uv + cd * ck).r, 0.9);
+            col.b = mix(col.b, texture2D(tScene, uv - cd * ck).b, 0.9);
           }
           vec3 bl = texture2D(tB1, vUv).rgb + texture2D(tB2, vUv).rgb * uB2;
           col += bl * uBloom;
@@ -2065,8 +2120,23 @@
           col = mix(vec3(l), col, 1.1);
           col += vec3(-0.012, -0.006, 0.022) * (1.0 - smoothstep(0.0, 0.5, l));
           col *= mix(vec3(1.0), vec3(1.035, 1.0, 0.955), smoothstep(0.4, 1.0, l));
+          if (uCine > 0.002) {        // filmic grade: teal shadows / warm highlights + S-curve
+            float l2 = dot(col, vec3(0.2126, 0.7152, 0.0722));
+            vec3 g = col + mix(vec3(-0.012, 0.022, 0.045), vec3(0.05, 0.014, -0.035), smoothstep(0.12, 0.8, l2));
+            g = clamp(g, 0.0, 1.0); g = mix(g, g * g * (3.0 - 2.0 * g), 0.4);
+            col = mix(col, g, uCine);
+          }
+          if (uDesat > 0.002) col = mix(col, vec3(dot(col, vec3(0.2126, 0.7152, 0.0722))) * vec3(0.96, 1.0, 1.06), uDesat);
           vec2 vq = (vUv - 0.5) * vec2(1.0, 0.86);
-          col *= 1.0 - uVig * pow(clamp(length(vq) * 1.35, 0.0, 1.0), 2.4);
+          col *= 1.0 - (uVig + uCine * 0.22) * pow(clamp(length(vq) * 1.35, 0.0, 1.0), 2.4);
+          if (uGrain > 0.001) {       // film grain, stronger in the mids, animated at 24 steps/s
+            float gt2 = floor(uTime * 24.0);
+            float gn = h12(gl_FragCoord.xy * 0.71 + gt2 * 17.3) + h12(gl_FragCoord.yx * 0.53 + gt2 * 9.1) - 1.0;
+            float gl2 = dot(col, vec3(0.2126, 0.7152, 0.0722));
+            col += gn * uGrain * (0.35 + 0.65 * (1.0 - abs(gl2 * 2.0 - 1.0)));
+          }
+          if (uBars > 0.002) col *= 1.0 - smoothstep(1.0 - uBars - 0.003, 1.0 - uBars, abs(vUv.y - 0.5) * 2.0);
+          col *= 1.0 - uFade;
           col += (h12(gl_FragCoord.xy + fract(uTime) * 61.0) - 0.5) / 255.0;
           gl_FragColor = vec4(col, 1.0);
         }`,
@@ -2300,7 +2370,7 @@
     }
     ((o.uRay.value = l ? o.uRayOn * 1.6 : 0),
       (o.tRay.value = V0.texture),
-      (o.uStreak.value = e.streak > 0 ? o.uStreakK : 0),
+      (o.uStreak.value = e.streak > 0 ? o.uStreakK * (1 + dt(te.fx.anam, 0)) : 0),
       (o.tStreak.value = T0.texture),
       (o.tScene.value = t),
       (o.tB1.value = _t.texture),
@@ -2347,6 +2417,24 @@
         (Jt.mode !== t && ((Jt.mode = t), Ze(), (Ne = !0))),
       Jt.mode
     );
+  }
+  const pgpV = new THREE.Vector3();
+  /* world point (game x, game y, height above track) -> screen uv [u, v, inFront] */
+  function pgpProject(t, e, n) {
+    if (!et) return [0.5, 0.5, 0];
+    pgpV.set(dt(t, 0), Xo(t, e) + dt(n, 0), dt(e, 0)).project(et);
+    return [pgpV.x * 0.5 + 0.5, pgpV.y * 0.5 + 0.5, pgpV.z < 1 ? 1 : 0];
+  }
+  function pgpCamPos() {
+    return et ? [et.position.x, et.position.y, et.position.z] : [0, 0, 0];
+  }
+  /* highest tier the auto-scaler may climb to ("ultra" on flagship phones / desktops) */
+  function pgpSetTop(t, e) {
+    if (!je[t]) return j.top;
+    j.top = t;
+    if (e && j.auto && _0.indexOf(j.tier.name) < _0.indexOf(t)) to(je[t], !0);
+    else if (_0.indexOf(j.tier.name) > _0.indexOf(t)) to(je[t], !0);
+    return j.top;
   }
   function wn(t) {
     if (t === "auto") return ((j.auto = !0), (nt.auto = !0), j.tier.name);
@@ -2401,7 +2489,7 @@
           const a = j.tier;
           (j.scale < Math.min(a.smax, w0) - 0.01
             ? ((j.scale = Math.min(a.smax, j.scale + 0.125)), (j.lastProbe = t), Ze())
-            : j.auto && a !== je.high && (to(je[_0[_0.indexOf(a.name) + 1]], !1), (j.scale = j.tier.smin), (j.lastProbe = t), Ze()),
+            : j.auto && a !== (je[j.top] || je.high) && (to(je[_0[_0.indexOf(a.name) + 1]], !1), (j.scale = j.tier.smin), (j.lastProbe = t), Ze()),
             t - j.lastProbe > 5e3 && (j.probeWait = Math.max(4e3, j.probeWait * 0.75)));
         }
       }
@@ -3137,7 +3225,7 @@
       C[E] = y > 1 / 150 ? 1 : 0;
       const T = w[E],
         M = Math.abs(T);
-      m[E] = -Math.sign(T) * 0.22 * Math.min(1, Math.pow(M * 60, 0.75));
+      m[E] = -Math.sign(T) * 0.31 * Math.min(1, Math.pow(M * 60, 0.75));
     }
     for (let E = 0; E < a; E++) {
       const y = E / a;
@@ -3145,7 +3233,7 @@
       T > u / 2 && (T -= u);
       const M = ut((Math.abs(T) - 220) / 500, 0, 1),
         S = M * M * (3 - 2 * M);
-      d[E] = 46 + S * (24 * Math.sin(X * 2 * y) + 13 * Math.sin(X * 5 * y + 1.1) + 7 * Math.sin(X * 9 * y + 2));
+      d[E] = 46 + S * (16 + 40 * Math.sin(X * 2 * y) + 19 * Math.sin(X * 5 * y + 1.1) + 9 * Math.sin(X * 9 * y + 2));
     }
     for (let E = 0; E < a; E++) d[E] = Math.max(d[E], 10 + Math.abs(m[E]) * (p[E] + kt) + ce);
     const x = new Float32Array(a);
@@ -3575,7 +3663,7 @@
       const S = new THREE.CanvasTexture(T);
       ((S.wrapS = THREE.ClampToEdgeWrapping),
         (S.wrapT = THREE.RepeatWrapping),
-        (S.anisotropy = Math.min(8, pe)),
+        (S.anisotropy = pe),
         (S.onUpdate = H(T)),
         (y.userData.shared = S.userData.shared = !0),
         (so = { nrm: y, rough: S }));
@@ -4108,7 +4196,7 @@
         (o.fillStyle = l[f][1]));
       for (let i = 30; i < 1e3; i += 120) (o.fillRect(i, u + 14, 40, 5), o.fillRect(i + 50, u + 109, 40, 5));
     }
-    return ((n = new THREE.CanvasTexture(a)), (n.anisotropy = Math.min(8, pe)), (n.userData.shared = !0), (Oo[t] = n), n);
+    return ((n = new THREE.CanvasTexture(a)), (n.anisotropy = pe), (n.userData.shared = !0), (Oo[t] = n), n);
   }
   function Yn(t) {
     const e = new THREE.ShaderMaterial({
@@ -4270,6 +4358,57 @@
           t.rigs.push({ a: w + x * 26, ph: (m.length - 1) * 3 + x, y: M - 2.4, w: y - 3 }));
       }
     }
+    pgpGates(t, m);
+  }
+  /* Speed gates: slim neon portals every ~200 m of track. They stream past in the foreground,
+     which is the strongest depth and speed cue a racing camera has. Pure emissive quads: ~40 tris each. */
+  function pgpGates(t, taken) {
+    const n = t.neon,
+      D = t.pal.arch,
+      step = 208,
+      cnt = Math.max(0, Math.floor((t.L - 420) / step));
+    let made = 0;
+    for (let q = 0; q < cnt; q++) {
+      const w = 300 + q * step;
+      let ok = w < t.L - 150;
+      for (const x of taken) {
+        let H = Math.abs(x + 26 - w);
+        ((H = Math.min(H, t.L - H)), H < 130 && (ok = !1));
+      }
+      if (!ok) continue;
+      Pt(t, w, k);
+      const H = [k.fx, 0, k.fz],
+        U = [k.rx, 0, k.rz],
+        E = made % 3 === 2 ? [0.35, 0.95, 1] : D[made & 1],
+        y = k.hw + 7.5,
+        tilt = k.s * y, // follow the banking so the gate sits square to the road
+        T = k.e - 2,
+        M = k.e + 23,
+        S = (B, b) => [k.x + U[0] * B, b + (B / y) * tilt, k.z + U[2] * B],
+        z = [
+          [-y, T],
+          [-y, M - 6],
+          [-y + 6, M],
+          [y - 6, M],
+          [y, M - 6],
+          [y, T],
+        ];
+      for (let B = 0; B < z.length - 1; B++) {
+        const b = z[B],
+          F = z[B + 1],
+          _ = F[0] - b[0],
+          R = F[1] - b[1],
+          A = Math.hypot(_, R),
+          N = (-R / A) * 0.8,
+          G = (_ / A) * 0.8;
+        for (const L of [-0.45, 0.45]) {
+          const W = (Y) => [Y[0] + H[0] * L, Y[1], Y[2] + H[2] * L];
+          n.quad(W(S(b[0] - N, b[1] - G)), W(S(F[0] - N, F[1] - G)), W(S(F[0] + N, F[1] + G)), W(S(b[0] + N, b[1] + G)), E);
+        }
+      }
+      made++;
+    }
+    t.gates = made;
   }
   function Jn(t, e) {
     const n = 0.5 + 0.5 * Math.sin(e * 3 - t * 1.15);
@@ -6461,7 +6600,7 @@
   }
   let P0 = 0,
     D0 = 0;
-  function br(t, e, n) {
+  function br(t, e, n, k) {
     try {
       if (!zt || !pt) return;
       ((t = dt(t, 0)), (e = dt(e, 0)));
@@ -6563,6 +6702,81 @@
             r = 55;
           zt.emit(t, o - 2, e, Math.cos(u) * r, 8 + Math.random() * 8, Math.sin(u) * r, 0.45, 4, 1, 0.3, 0.95, 1, 0, 2);
         }
+      else if (n === "firework") {
+        /* aerial shell: spherical burst of glowing stars high above the track + a core flash */
+        k = k || {};
+        const cr = dt(k.r, 1),
+          cg = dt(k.g, 0.6),
+          cb = dt(k.b, 0.3),
+          hy = o + dt(k.h, 110),
+          cnt = Math.ceil(90 * l),
+          sp = dt(k.speed, 95);
+        for (let f = 0; f < cnt; f++) {
+          const u = Math.random() * X,
+            r = Math.acos(2 * Math.random() - 1),
+            c = sp * (0.75 + Math.random() * 0.35),
+            w = 0.75 + Math.random() * 0.5;
+          zt.emit(
+            t,
+            hy,
+            e,
+            Math.sin(r) * Math.cos(u) * c,
+            Math.cos(r) * c,
+            Math.sin(r) * Math.sin(u) * c,
+            1.1 + Math.random() * 0.9,
+            5.5,
+            0.6,
+            cr * w,
+            cg * w,
+            cb * w,
+            38,
+            1.5,
+          );
+        }
+        zt.emit(t, hy, e, 0, 0, 0, 0.35, 150, 50, cr, cg, cb, 0, 0);
+      } else if (n === "confetti") {
+        /* streamer shower falling across the track */
+        const pal = [
+          [1, 0.3, 0.75],
+          [0.3, 0.9, 1],
+          [1, 0.85, 0.25],
+          [0.5, 1, 0.55],
+          [1, 1, 1],
+        ];
+        for (let f = 0, u = Math.ceil(70 * l); f < u; f++) {
+          const c = pal[f % pal.length],
+            r = Math.random() * X,
+            h = Math.random() * 46;
+          zt.emit(
+            t + Math.cos(r) * h,
+            o + 26 + Math.random() * 30,
+            e + Math.sin(r) * h,
+            (Math.random() - 0.5) * 26,
+            -6 - Math.random() * 10,
+            (Math.random() - 0.5) * 26,
+            1.6 + Math.random() * 1.6,
+            2.6,
+            1.6,
+            c[0],
+            c[1],
+            c[2],
+            14,
+            1.2,
+          );
+        }
+      } else if (n === "ring") {
+        /* flat plasma shock ring (boost ignition / photo finish) */
+        k = k || {};
+        const cr = dt(k.r, 0.4),
+          cg = dt(k.g, 0.9),
+          cb = dt(k.b, 1),
+          sp = dt(k.speed, 120);
+        for (let f = 0; f < 72; f++) {
+          const u = (f / 72) * X;
+          zt.emit(t, o - 1, e, Math.cos(u) * sp, 3 + Math.random() * 5, Math.sin(u) * sp, 0.5, 5, 0.8, cr, cg, cb, 0, 1.6);
+        }
+        zt.emit(t, o + 1, e, 0, 0, 0, 0.22, 90, 20, cr, cg, cb, 0, 0);
+      }
     } catch {}
   }
   function Sr(t) {
@@ -6617,7 +6831,7 @@
       (n.save(), n.translate(512, 512), n.rotate(C), n.fillRect(250, -2, 100, 4), n.restore());
     }
     const o = new THREE.CanvasTexture(e);
-    o.anisotropy = 8;
+    o.anisotropy = pe;
     const l = new THREE.Mesh(
       new THREE.CircleGeometry(60, 96).rotateX(-Math.PI / 2),
       new THREE.MeshBasicMaterial({ map: o, transparent: !0, depthWrite: !1 }),
@@ -6793,7 +7007,18 @@
       ga.multiplyMatrices(e.projectionMatrix, e.matrixWorldInverse),
       (l = yn())),
       (C0 = 0));
-    const f = Le.uniforms;
+    const f = Le.uniforms,
+      fx = te.fx;
+    f.uCA.value = dt(fx.ca, 0);
+    f.uShock.value.set(dt(fx.shock[0], 0.5), dt(fx.shock[1], 0.5), dt(fx.shock[2], 0), dt(fx.shock[3], 0));
+    f.uGrain.value = dt(fx.grain, 0);
+    f.uCine.value = dt(fx.cine, 0);
+    f.uBars.value = dt(fx.bars, 0);
+    f.uDesat.value = dt(fx.desat, 0);
+    f.uFade.value = ut(dt(fx.fade, 0), 0, 1);
+    f.uExposure.value = 0.92 * dt(fx.exposure, 1);
+    n = Math.min(1.6, n + dt(fx.radial, 0));
+    a = a * (1 + dt(fx.bloom, 0));
     if (((f.uRadial.value = n), (f.uBloom.value = a), (f.uFlash.value = P0), t === vt)) {
       de.copy(ot.sun.value).multiplyScalar(8e3).add(e.position).project(e);
       const u = de.z < 1 && Math.abs(de.x) < 1.15 && Math.abs(de.y) < 1.15;
@@ -7001,7 +7226,18 @@
       te.debug === "overhead")
     )
       (et.up.set(0, 0, -1), et.position.set(f, 1400, u + 1), et.lookAt(f, 0, u), et.up.set(0, 1, 0));
-    else {
+    else if (te.cine && te.cine.on) {
+      const cc = te.cine,
+        cf = ut(dt(cc.fov, 40), 8, 110);
+      Math.abs(et.fov - cf) > 0.01 && ((et.fov = cf), et.updateProjectionMatrix());
+      const sk = v ? (Math.random() - 0.5) * v * 0.25 : 0;
+      (et.position.set(dt(cc.px, f) + sk, dt(cc.py, 60) + sk * 0.6, dt(cc.pz, u)),
+        At.set(dt(cc.tx, f), dt(cc.ty, 40), dt(cc.tz, u)),
+        et.up.set(0, 1, 0),
+        et.lookAt(At),
+        cc.roll && et.rotateZ(cc.roll),
+        (u0 = null));
+    } else {
       const b = Math.cos(r),
         F = Math.sin(r);
       (F0(o, f, u, Va, h0),
@@ -7023,6 +7259,7 @@
         const W = te.debugLook;
         (At.set(et.position.x + W[0] * 100, et.position.y + W[1] * 100, et.position.z + W[2] * 100), et.up.set(0, 1, 0), et.lookAt(At));
       }
+      te.fx.roll && et.rotateZ(te.fx.roll);
     }
     (et.updateMatrixWorld(),
       Wn(o, et.position.x, et.position.y, et.position.z),
