@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Plasma Grand Prix</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0b0620; overflow: hidden;
+    overscroll-behavior: none; -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
+  #root { position: fixed; inset: 0; overflow: hidden; background: #0b0620; }
+  #game { position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+    image-rendering: pixelated; image-rendering: crisp-edges; }
+  /* CSS-only splash: visible from first paint, driven by window.__splash(pct,label), removed by window.__splashDone() */
+  #splash { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 38%, #1e0f4a 0%, #0b0620 62%); color: #e9f3ff; pointer-events: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    font: 700 14px/1.2 ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    opacity: 1; transition: opacity .4s ease; }
+  #splash.done { opacity: 0; }
+  #splash .sp-in { text-align: center; width: min(70vw, 420px); }
+  #splash .sp-title { font-size: clamp(22px, 6.5vmin, 44px); letter-spacing: .16em; text-indent: .16em; white-space: nowrap;
+    color: #fff; text-shadow: 0 0 12px #38e1ff, 0 0 28px #8a3cff; }
+  #splash .sp-sub { margin-top: 6px; font-size: clamp(10px, 2.4vmin, 14px); letter-spacing: .34em; text-indent: .34em; color: #ff9a3c; }
+  #splash .sp-bar { position: relative; height: 3px; margin: 18px auto 8px; background: rgba(255,255,255,.12); border-radius: 2px; overflow: hidden; }
+  #splash .sp-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: linear-gradient(90deg, #38e1ff, #8a3cff, #ff9a3c);
+    transform: scaleX(.02); transform-origin: 0 50%; transition: transform .25s ease-out; }
+  /* until the game reports progress: slow indeterminate sweep */
+  #splash:not(.driven) .sp-bar i { width: 35%; transform: none; animation: sp-sweep 1.3s ease-in-out infinite; }
+  @keyframes sp-sweep { 0% { left: -35%; } 100% { left: 100%; } }
+  #splash .sp-lbl { min-height: 1.2em; font-size: clamp(9px, 2.2vmin, 12px); letter-spacing: .18em; color: rgba(233,243,255,.6); }
+  @media (prefers-reduced-motion: reduce) { #splash:not(.driven) .sp-bar i { animation-duration: 3s; } }
+</style>
+</head>
+<body>
+<div id="splash" aria-hidden="true"><div class="sp-in">
+  <div class="sp-title">PLASMA GRAND PRIX</div>
+  <div class="sp-sub">NEON HARBOR &middot; SELENE DOME</div>
+  <div class="sp-bar"><i id="sp-fill"></i></div>
+  <div class="sp-lbl" id="sp-lbl">LOADING</div>
+</div></div>
+<script src="src/splash.js"></script>
+<div id="root"><canvas id="game" width="476" height="224"></canvas></div>
+<script src="src/vendor/three.r158.min.js"></script>
+<script src="src/ships.js"></script>
+<script src="src/track.js"></script>
+<script src="src/render3d.js"></script>
+<script src="src/physics.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/story.js"></script>
+<script src="src/voice.js"></script>
+<script src="src/input.js"></script>
+<script src="src/hud.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>
