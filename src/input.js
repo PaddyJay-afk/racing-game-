@@ -224,7 +224,7 @@
       : { code: "insecure", on: !1, msg: "TILT NEEDS A SECURE (HTTPS) PAGE", detail: "TOUCH PADS ON" };
   }
   function U() {
-    return 28 - (v(+m.get("tiltSens", 5) || 5, 1, 10) - 1) * 2;
+    return 36 - (v(+m.get("tiltSens", 5) || 5, 1, 10) - 1) * 2;
   }
   function K() {
     return e.active && m.get("steerMode", "auto") !== "pads";

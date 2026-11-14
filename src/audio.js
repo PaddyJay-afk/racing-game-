@@ -2967,6 +2967,17 @@
         } catch {}
     });
   }
+  /* iOS: system speech hijacks the audio session and silences everything else (see voice.js) */
+  function pgpNoTts() {
+    try {
+      const f = z.Settings && z.Settings.get("voice.tts", null);
+      if (f !== null && f !== void 0) return !f;
+      const u = navigator.userAgent || "";
+      return /iPhone|iPad|iPod/.test(u) || (/Macintosh/.test(u) && (navigator.maxTouchPoints || 0) > 1);
+    } catch {
+      return !1;
+    }
+  }
   function Xe() {
     if (l.ctx) return !0;
     if (typeof navigator < "u" && navigator.audioSession)
@@ -3125,7 +3136,7 @@
         if (((n.buffer = t), n.connect(l.ctx.destination), n.start(0), !l.unlocked)) {
           l.unlocked = !0;
           try {
-            if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
+            if (window.speechSynthesis && window.SpeechSynthesisUtterance && !pgpNoTts()) {
               const e = new SpeechSynthesisUtterance(" ");
               ((e.volume = 0), window.speechSynthesis.speak(e));
             }
@@ -3217,7 +3228,7 @@
     },
     announce(t) {
       try {
-        if (!l.unlocked || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+        if (!l.unlocked || !window.speechSynthesis || !window.SpeechSynthesisUtterance || pgpNoTts()) return;
         const n = window.speechSynthesis;
         if (z.Voice && z.Voice.speaking) return;
         if (l.announceU && (n.speaking || n.pending))

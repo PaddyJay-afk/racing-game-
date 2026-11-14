@@ -284,11 +284,18 @@
       (e.utter = null),
       (e.cur = null));
   }
+  /* iOS: speechSynthesis takes over the shared audio session and mutes/interrupts Web Audio (music and
+     effects), so system voices stay off there unless Settings "voice.tts" is forced on. Captions still show. */
+  const IOS = (function(){try{var u=navigator.userAgent||"";return /iPhone|iPad|iPod/.test(u)||(/Macintosh/.test(u)&&(navigator.maxTouchPoints||0)>1)}catch(e){return false}})();
+  function ttsAllowed() {
+    const f = x("voice.tts", null);
+    return f === null ? !IOS : !!f;
+  }
   function B(t) {
     try {
       const r = window.speechSynthesis,
         n = window.SpeechSynthesisUtterance;
-      if (!r || !n) {
+      if (!r || !n || !ttsAllowed()) {
         ((t.mode = "none"), setTimeout(() => h(t.token), 50));
         return;
       }
